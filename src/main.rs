@@ -5,12 +5,14 @@ mod scene;
 mod script;
 mod ui;
 mod vars;
+mod audio;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<scene::background::BackgroundManager>()
         .init_resource::<scene::characters::CharacterManager>()
+        .init_resource::<audio::MusicManager>()
         .init_resource::<vars::store::VarStore>()
         .init_resource::<script::runner::ScriptRunner>()
         .init_resource::<ui::dialogue::DialogueState>()

@@ -19,6 +19,13 @@ use crate::scene::background::{
     set_background_color,
 };
 
+use crate::audio::{
+    MusicManager,
+    play_music,
+    stop_music,
+    play_sfx,
+};
+
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Say(String),
@@ -49,6 +56,10 @@ pub enum Instruction {
 
     BgImage(String),
     BgColor(Color),
+
+    MusicPlay(String),
+    MusicStop,
+    SfxPlay(String),
 }
 
 #[derive(Resource)]
@@ -101,6 +112,7 @@ pub fn script_runner_system(
     mut choice_req: ResMut<ChoiceRequest>,
     mut characters: ResMut<CharacterManager>,
     mut backgrounds: ResMut<BackgroundManager>,
+    mut music: ResMut<MusicManager>,
 ) {
     if runner.waiting || runner.ip >= runner.instructions.len() {
         return;
@@ -168,6 +180,18 @@ pub fn script_runner_system(
                 &mut backgrounds,
                 color,
             );
+        }
+
+        Instruction::MusicPlay(path) => {
+            play_music(&mut commands, &asset_server, &mut music, path);
+        }
+
+        Instruction::MusicStop => {
+            stop_music(&mut commands, &mut music);
+        }
+
+        Instruction::SfxPlay(path) => {
+            play_sfx(&mut commands, &asset_server, path);
         }
     }
 
