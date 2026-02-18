@@ -1,23 +1,52 @@
 use bevy::prelude::*;
+use std::collections::HashMap;
+
 use crate::ui::dialogue::DialogueState;
+use crate::vars::store::{VarStore, Value};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Say(String),
     SetVar(String, i64),
-    Jump(usize),
+    Label(String),
+    JumpLabel(String),
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct ScriptRunner {
     pub instructions: Vec<Instruction>,
+    pub labels: HashMap<String, usize>,
     pub ip: usize,
     pub waiting: bool,
+}
+
+impl Default for ScriptRunner {
+    fn default() -> Self {
+        Self {
+            instructions: Vec::new(),
+            labels: HashMap::new(),
+            ip: 0,
+            waiting: false,
+        }
+    }
+}
+
+impl ScriptRunner {
+    pub fn rebuild_labels(&mut self) {
+        self.labels.clear();
+
+        for (index, instr) in self.instructions.iter().enumerate() {
+            if let Instruction::Label(name) = instr {
+                self.labels.insert(name.clone(), index);
+            }
+        }
+    }
 }
 
 pub fn script_runner_system(
     mut runner: ResMut<ScriptRunner>,
     mut dialogue: ResMut<DialogueState>,
+    mut vars: ResMut<VarStore>,
 ) {
     if runner.waiting {
         return;
@@ -35,12 +64,21 @@ pub fn script_runner_system(
             runner.waiting = true;
         }
 
-        Instruction::SetVar(_, _) => {
-            // handled later
+        Instruction::SetVar(name, value) => {
+            vars.set(&name, Value::Int(value));
         }
-        Instruction::Jump(pos) => {
-            runner.ip = pos;
-            return;
+
+        Instruction::Label(_) => {
+            // Labels do nothing
+        }
+
+        Instruction::JumpLabel(label) => {
+            if let Some(&pos) = runner.labels.get(&label) {
+                runner.ip = pos;
+                return;
+            } else {
+                println!("Label not found: {}", label);
+            }
         }
     }
 
