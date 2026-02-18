@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::ui::dialogue::DialogueState;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -16,6 +17,7 @@ pub struct ScriptRunner {
 
 pub fn script_runner_system(
     mut runner: ResMut<ScriptRunner>,
+    mut dialogue: ResMut<DialogueState>,
 ) {
     if runner.waiting {
         return;
@@ -29,9 +31,10 @@ pub fn script_runner_system(
 
     match instruction {
         Instruction::Say(text) => {
-            println!("DIALOGUE: {}", text);
+            dialogue.current_line = Some(text);
             runner.waiting = true;
         }
+
         Instruction::SetVar(_, _) => {
             // handled later
         }
