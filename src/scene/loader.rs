@@ -6,10 +6,8 @@ pub fn load_test_scene(
     asset_server: Res<AssetServer>,
     mut runner: ResMut<ScriptRunner>,
 ) {
-    // Camera (new Bevy style)
     commands.spawn(Camera2d);
 
-    // Background image
     let texture: Handle<Image> = asset_server.load("images/bg.png");
 
     commands.spawn((
@@ -17,19 +15,24 @@ pub fn load_test_scene(
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
 
-    // Test script with labels
     runner.instructions = vec![
         Instruction::Label("start".into()),
-        Instruction::Say("This is the start.".into()),
-        Instruction::JumpLabel("ending".into()),
+        Instruction::Say("Where do you want to go?".into()),
+        Instruction::Choice(vec![
+            ("Go left".into(), "left_path".into()),
+            ("Go right".into(), "right_path".into()),
+        ]),
 
-        Instruction::Label("middle".into()),
-        Instruction::Say("You should NOT see this.".into()),
+        Instruction::Label("left_path".into()),
+        Instruction::Say("You went left.".into()),
+        Instruction::JumpLabel("end".into()),
 
-        Instruction::Label("ending".into()),
-        Instruction::Say("This is the ending.".into()),
+        Instruction::Label("right_path".into()),
+        Instruction::Say("You went right.".into()),
+
+        Instruction::Label("end".into()),
+        Instruction::Say("End of demo.".into()),
     ];
 
-    // Build label lookup table
     runner.rebuild_labels();
 }
