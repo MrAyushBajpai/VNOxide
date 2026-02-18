@@ -9,6 +9,7 @@ mod ui;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .init_resource::<scene::characters::CharacterManager>()
         .init_resource::<vars::store::VarStore>()
         .init_resource::<script::runner::ScriptRunner>()
         .init_resource::<ui::dialogue::DialogueState>()

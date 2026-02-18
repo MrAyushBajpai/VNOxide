@@ -5,6 +5,7 @@ use crate::ui::dialogue::DialogueState;
 use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
 use crate::script::expr::eval;
+use crate::scene::characters::{CharacterManager, show_character, hide_character};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -23,6 +24,16 @@ pub enum Instruction {
     },
 
     Choice(Vec<(String, String)>),
+
+    ShowCharacter {
+        name: String,
+        expression: String,
+        position: String,
+    },
+
+    HideCharacter {
+        name: String,
+    },
 }
 
 #[derive(Resource)]
@@ -67,10 +78,13 @@ fn set_number(vars: &mut VarStore, name: &str, value: f64) {
 }
 
 pub fn script_runner_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut runner: ResMut<ScriptRunner>,
     mut dialogue: ResMut<DialogueState>,
     mut vars: ResMut<VarStore>,
     mut choice_req: ResMut<ChoiceRequest>,
+    mut characters: ResMut<CharacterManager>,
 ) {
     if runner.waiting || runner.ip >= runner.instructions.len() {
         return;
@@ -107,6 +121,21 @@ pub fn script_runner_system(
                 runner.jump_to_label(&target);
                 return;
             }
+        }
+
+        Instruction::ShowCharacter { name, expression, position } => {
+            show_character(
+                &mut commands,
+                &asset_server,
+                &mut characters,
+                name,
+                expression,
+                position,
+            );
+        }
+
+        Instruction::HideCharacter { name } => {
+            hide_character(&mut commands, &mut characters, &name);
         }
     }
 

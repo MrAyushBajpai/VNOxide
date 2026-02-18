@@ -49,6 +49,25 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             continue;
         }
 
+        if let Some(rest) = line.strip_prefix("show ") {
+            let parts: Vec<&str> = rest.split_whitespace().collect();
+            if parts.len() >= 3 {
+                instructions.push(Instruction::ShowCharacter {
+                    name: parts[0].to_string(),
+                    expression: parts[1].to_string(),
+                    position: parts[2].to_string(),
+                });
+            }
+            continue;
+        }
+
+        if let Some(rest) = line.strip_prefix("hide ") {
+            instructions.push(Instruction::HideCharacter {
+                name: rest.trim().to_string(),
+            });
+            continue;
+        }
+
         if let Some(rest) = line.strip_prefix("choice ") {
             let mut options = Vec::new();
 
