@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use crate::script::runner::ScriptRunner;
 use crate::script::loader::load_script;
 
+
 pub fn load_test_scene(
     mut commands: Commands,
     asset_server: Res<AssetServer>,

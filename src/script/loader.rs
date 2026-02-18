@@ -1,5 +1,6 @@
 use std::fs;
 use crate::script::runner::Instruction;
+use crate::scene::characters::TransformParams;
 
 pub fn load_script(path: &str) -> Vec<Instruction> {
     let content = fs::read_to_string(format!("assets/{}", path))
@@ -51,13 +52,34 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
 
         if let Some(rest) = line.strip_prefix("show ") {
             let parts: Vec<&str> = rest.split_whitespace().collect();
-            if parts.len() >= 3 {
+
+            if parts.len() >= 2 {
+                let name = parts[0].to_string();
+                let expression = parts[1].to_string();
+
+                let mut params = TransformParams::default();
+
+                for part in &parts[2..] {
+                    if *part == "left" || *part == "center" || *part == "right" {
+                        params.preset = Some(part.to_string());
+                    } else if let Some((k, v)) = part.split_once('=') {
+                        match k {
+                            "x" => params.x = v.parse().ok(),
+                            "y" => params.y = v.parse().ok(),
+                            "scale" => params.scale = v.parse().ok(),
+                            "rot" => params.rotation_deg = v.parse().ok(),
+                            _ => {}
+                        }
+                    }
+                }
+
                 instructions.push(Instruction::ShowCharacter {
-                    name: parts[0].to_string(),
-                    expression: parts[1].to_string(),
-                    position: parts[2].to_string(),
+                    name,
+                    expression,
+                    params,
                 });
             }
+
             continue;
         }
 
@@ -65,22 +87,6 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             instructions.push(Instruction::HideCharacter {
                 name: rest.trim().to_string(),
             });
-            continue;
-        }
-
-        if let Some(rest) = line.strip_prefix("choice ") {
-            let mut options = Vec::new();
-
-            for part in rest.split('|') {
-                if let Some((text, label)) = part.split_once("->") {
-                    options.push((
-                        text.trim().to_string(),
-                        label.trim().to_string(),
-                    ));
-                }
-            }
-
-            instructions.push(Instruction::Choice(options));
             continue;
         }
 

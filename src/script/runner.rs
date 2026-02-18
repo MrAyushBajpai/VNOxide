@@ -5,7 +5,12 @@ use crate::ui::dialogue::DialogueState;
 use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
 use crate::script::expr::eval;
-use crate::scene::characters::{CharacterManager, show_character, hide_character};
+use crate::scene::characters::{
+    CharacterManager,
+    show_character,
+    hide_character,
+    TransformParams
+};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -28,7 +33,7 @@ pub enum Instruction {
     ShowCharacter {
         name: String,
         expression: String,
-        position: String,
+        params: TransformParams,
     },
 
     HideCharacter {
@@ -123,14 +128,14 @@ pub fn script_runner_system(
             }
         }
 
-        Instruction::ShowCharacter { name, expression, position } => {
+        Instruction::ShowCharacter { name, expression, params } => {
             show_character(
                 &mut commands,
                 &asset_server,
                 &mut characters,
                 name,
                 expression,
-                position,
+                params,
             );
         }
 
