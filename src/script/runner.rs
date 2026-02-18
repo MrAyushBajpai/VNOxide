@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::ui::dialogue::DialogueState;
 use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
+use crate::script::expr::evaluate_expression;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -11,14 +12,11 @@ pub enum Instruction {
     Label(String),
     JumpLabel(String),
 
-    // set x = 5, set x += 2 etc
     SetVar {
         name: String,
-        op: SetOp,
-        value: f64,
+        expression: String,
     },
 
-    // if x >= 5 jump label
     IfJump {
         var: String,
         cmp: CmpOp,
@@ -27,16 +25,6 @@ pub enum Instruction {
     },
 
     Choice(Vec<(String, String)>),
-}
-
-#[derive(Debug, Clone)]
-pub enum SetOp {
-    Assign,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
 }
 
 #[derive(Debug, Clone)]
@@ -70,7 +58,6 @@ impl Default for ScriptRunner {
 impl ScriptRunner {
     pub fn rebuild_labels(&mut self) {
         self.labels.clear();
-
         for (i, instr) in self.instructions.iter().enumerate() {
             if let Instruction::Label(name) = instr {
                 self.labels.insert(name.clone(), i);
@@ -82,10 +69,12 @@ impl ScriptRunner {
         if let Some(&pos) = self.labels.get(label) {
             self.ip = pos;
             self.waiting = false;
-        } else {
-            println!("Label not found: {}", label);
         }
     }
+}
+
+fn set_number(vars: &mut VarStore, name: &str, value: f64) {
+    vars.set(name, Value::Float(value as f32));
 }
 
 fn get_number(vars: &VarStore, name: &str) -> f64 {
@@ -96,21 +85,13 @@ fn get_number(vars: &VarStore, name: &str) -> f64 {
     }
 }
 
-fn set_number(vars: &mut VarStore, name: &str, value: f64) {
-    vars.set(name, Value::Float(value as f32));
-}
-
 pub fn script_runner_system(
     mut runner: ResMut<ScriptRunner>,
     mut dialogue: ResMut<DialogueState>,
     mut vars: ResMut<VarStore>,
     mut choice_req: ResMut<ChoiceRequest>,
 ) {
-    if runner.waiting {
-        return;
-    }
-
-    if runner.ip >= runner.instructions.len() {
+    if runner.waiting || runner.ip >= runner.instructions.len() {
         return;
     }
 
@@ -134,25 +115,15 @@ pub fn script_runner_system(
             runner.waiting = true;
         }
 
-        Instruction::SetVar { name, op, value } => {
-            let current = get_number(&vars, &name);
-
-            let result = match op {
-                SetOp::Assign => value,
-                SetOp::Add => current + value,
-                SetOp::Sub => current - value,
-                SetOp::Mul => current * value,
-                SetOp::Div => current / value,
-                SetOp::Mod => current % value,
-            };
-
-            set_number(&mut vars, &name, result);
+        Instruction::SetVar { name, expression } => {
+            let value = evaluate_expression(&expression, &vars);
+            set_number(&mut vars, &name, value);
         }
 
         Instruction::IfJump { var, cmp, value, target } => {
             let current = get_number(&vars, &var);
 
-            let condition = match cmp {
+            let cond = match cmp {
                 CmpOp::Eq => current == value,
                 CmpOp::Greater => current > value,
                 CmpOp::Less => current < value,
@@ -160,7 +131,7 @@ pub fn script_runner_system(
                 CmpOp::LessEq => current <= value,
             };
 
-            if condition {
+            if cond {
                 runner.jump_to_label(&target);
                 return;
             }
