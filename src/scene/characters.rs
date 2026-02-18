@@ -18,6 +18,7 @@ pub struct TransformParams {
     pub scale: Option<f32>,
     pub rotation_deg: Option<f32>,
     pub preset: Option<String>,
+    pub layer: Option<f32>,
 }
 
 impl Default for TransformParams {
@@ -28,16 +29,17 @@ impl Default for TransformParams {
             scale: None,
             rotation_deg: None,
             preset: None,
+            layer: None,
         }
     }
 }
 
-fn preset_position(name: &str) -> Vec3 {
+fn preset_position(name: &str) -> (f32, f32) {
     match name {
-        "left" => Vec3::new(-400.0, -100.0, 10.0),
-        "center" => Vec3::new(0.0, -100.0, 10.0),
-        "right" => Vec3::new(400.0, -100.0, 10.0),
-        _ => Vec3::new(0.0, -100.0, 10.0),
+        "left" => (-400.0, -100.0),
+        "center" => (0.0, -100.0),
+        "right" => (400.0, -100.0),
+        _ => (0.0, -100.0),
     }
 }
 
@@ -57,30 +59,26 @@ pub fn show_character(
     let path = format!("characters/{}/{}.png", name, expression);
     let texture: Handle<Image> = asset_server.load(path);
 
-    // Start from preset or default
-    let mut translation = if let Some(ref preset) = params.preset {
+    // Base position
+    let (mut x, mut y) = if let Some(ref preset) = params.preset {
         preset_position(preset)
     } else {
-        Vec3::new(0.0, -100.0, 10.0)
+        (0.0, -100.0)
     };
 
-    // Override x/y if provided
-    if let Some(x) = params.x {
-        translation.x = x;
-    }
+    // Overrides
+    if let Some(v) = params.x { x = v; }
+    if let Some(v) = params.y { y = v; }
 
-    if let Some(y) = params.y {
-        translation.y = y;
-    }
+    // Layer (z)
+    let z = params.layer.unwrap_or(10.0);
 
-    let mut transform = Transform::from_translation(translation);
+    let mut transform = Transform::from_xyz(x, y, z);
 
-    // Scale
     if let Some(scale) = params.scale {
         transform.scale = Vec3::splat(scale);
     }
 
-    // Rotation
     if let Some(rot) = params.rotation_deg {
         transform.rotation = Quat::from_rotation_z(rot.to_radians());
     }

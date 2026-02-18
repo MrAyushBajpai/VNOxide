@@ -52,11 +52,9 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
 
         if let Some(rest) = line.strip_prefix("show ") {
             let parts: Vec<&str> = rest.split_whitespace().collect();
-
             if parts.len() >= 2 {
                 let name = parts[0].to_string();
                 let expression = parts[1].to_string();
-
                 let mut params = TransformParams::default();
 
                 for part in &parts[2..] {
@@ -68,6 +66,7 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
                             "y" => params.y = v.parse().ok(),
                             "scale" => params.scale = v.parse().ok(),
                             "rot" => params.rotation_deg = v.parse().ok(),
+                            "layer" => params.layer = v.parse().ok(),
                             _ => {}
                         }
                     }
@@ -79,7 +78,6 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
                     params,
                 });
             }
-
             continue;
         }
 

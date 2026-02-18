@@ -8,34 +8,41 @@ pub struct DialogueState {
 #[derive(Component)]
 pub struct DialogueText;
 
+#[derive(Component)]
+pub struct DialogueRoot;
+
 pub fn setup_dialogue_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
     let font = asset_server.load("fonts/main.ttf");
 
-    commands.spawn((
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(25.0),
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(0.0),
-            ..default()
-        },
-        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
-    ))
-    .with_children(|parent| {
-        parent.spawn((
-            Text::new(""),
-            TextFont {
-                font,
-                font_size: 32.0,
+    // Root dialogue panel
+    commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(25.0),
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.0),
+                padding: UiRect::all(Val::Px(12.0)),
                 ..default()
             },
-            TextColor(Color::WHITE),
-            DialogueText,
-        ));
-    });
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+            DialogueRoot,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new(""),
+                TextFont {
+                    font,
+                    font_size: 32.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                DialogueText,
+            ));
+        });
 }
 
 pub fn update_dialogue_text(
@@ -47,6 +54,9 @@ pub fn update_dialogue_text(
     }
 
     for mut text in &mut query {
-        text.0 = dialogue.current_line.clone().unwrap_or_default();
+        text.0 = dialogue
+            .current_line
+            .clone()
+            .unwrap_or_default();
     }
 }

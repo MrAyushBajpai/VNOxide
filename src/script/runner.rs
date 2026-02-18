@@ -9,7 +9,7 @@ use crate::scene::characters::{
     CharacterManager,
     show_character,
     hide_character,
-    TransformParams
+    TransformParams,
 };
 
 #[derive(Debug, Clone)]
@@ -121,8 +121,7 @@ pub fn script_runner_system(
         }
 
         Instruction::IfJump { condition, target } => {
-            let result = eval(&condition, &vars);
-            if result != 0.0 {
+            if eval(&condition, &vars) != 0.0 {
                 runner.jump_to_label(&target);
                 return;
             }
