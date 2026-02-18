@@ -5,11 +5,18 @@ use crate::ui::dialogue::DialogueState;
 use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
 use crate::script::expr::eval;
+
 use crate::scene::characters::{
     CharacterManager,
     show_character,
     hide_character,
     TransformParams,
+};
+
+use crate::scene::background::{
+    BackgroundManager,
+    set_background_image,
+    set_background_color,
 };
 
 #[derive(Debug, Clone)]
@@ -39,6 +46,9 @@ pub enum Instruction {
     HideCharacter {
         name: String,
     },
+
+    BgImage(String),
+    BgColor(Color),
 }
 
 #[derive(Resource)]
@@ -90,6 +100,7 @@ pub fn script_runner_system(
     mut vars: ResMut<VarStore>,
     mut choice_req: ResMut<ChoiceRequest>,
     mut characters: ResMut<CharacterManager>,
+    mut backgrounds: ResMut<BackgroundManager>,
 ) {
     if runner.waiting || runner.ip >= runner.instructions.len() {
         return;
@@ -140,6 +151,23 @@ pub fn script_runner_system(
 
         Instruction::HideCharacter { name } => {
             hide_character(&mut commands, &mut characters, &name);
+        }
+
+        Instruction::BgImage(path) => {
+            set_background_image(
+                &mut commands,
+                &asset_server,
+                &mut backgrounds,
+                path,
+            );
+        }
+
+        Instruction::BgColor(color) => {
+            set_background_color(
+                &mut commands,
+                &mut backgrounds,
+                color,
+            );
         }
     }
 

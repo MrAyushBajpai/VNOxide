@@ -1,6 +1,26 @@
 use std::fs;
+use bevy::prelude::Color;
+
 use crate::script::runner::Instruction;
 use crate::scene::characters::TransformParams;
+
+fn parse_color(value: &str) -> Option<Color> {
+    match value {
+        "red" => Some(Color::srgb(1.0, 0.0, 0.0)),
+        "green" => Some(Color::srgb(0.0, 1.0, 0.0)),
+        "blue" => Some(Color::srgb(0.0, 0.0, 1.0)),
+        _ => {
+            if value.starts_with('#') && value.len() == 7 {
+                let r = u8::from_str_radix(&value[1..3], 16).ok()?;
+                let g = u8::from_str_radix(&value[3..5], 16).ok()?;
+                let b = u8::from_str_radix(&value[5..7], 16).ok()?;
+                Some(Color::srgb_u8(r, g, b))
+            } else {
+                None
+            }
+        }
+    }
+}
 
 pub fn load_script(path: &str) -> Vec<Instruction> {
     let content = fs::read_to_string(format!("assets/{}", path))
@@ -30,24 +50,18 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             continue;
         }
 
-        if let Some(rest) = line.strip_prefix("set ") {
-            if let Some((name, expr)) = rest.split_once('=') {
-                instructions.push(Instruction::SetVar {
-                    name: name.trim().to_string(),
-                    expression: expr.trim().to_string(),
-                });
+        if let Some(rest) = line.strip_prefix("bg ") {
+            if let Some(path) = rest.strip_prefix("image=") {
+                instructions.push(Instruction::BgImage(path.trim().to_string()));
+                continue;
             }
-            continue;
-        }
 
-        if let Some(rest) = line.strip_prefix("if ") {
-            if let Some((cond, target)) = rest.split_once(" jump ") {
-                instructions.push(Instruction::IfJump {
-                    condition: cond.trim().to_string(),
-                    target: target.trim().to_string(),
-                });
+            if let Some(color_str) = rest.strip_prefix("color=") {
+                if let Some(color) = parse_color(color_str.trim()) {
+                    instructions.push(Instruction::BgColor(color));
+                }
+                continue;
             }
-            continue;
         }
 
         if let Some(rest) = line.strip_prefix("show ") {
@@ -55,22 +69,7 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             if parts.len() >= 2 {
                 let name = parts[0].to_string();
                 let expression = parts[1].to_string();
-                let mut params = TransformParams::default();
-
-                for part in &parts[2..] {
-                    if *part == "left" || *part == "center" || *part == "right" {
-                        params.preset = Some(part.to_string());
-                    } else if let Some((k, v)) = part.split_once('=') {
-                        match k {
-                            "x" => params.x = v.parse().ok(),
-                            "y" => params.y = v.parse().ok(),
-                            "scale" => params.scale = v.parse().ok(),
-                            "rot" => params.rotation_deg = v.parse().ok(),
-                            "layer" => params.layer = v.parse().ok(),
-                            _ => {}
-                        }
-                    }
-                }
+                let params = TransformParams::default();
 
                 instructions.push(Instruction::ShowCharacter {
                     name,
@@ -87,8 +86,6 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             });
             continue;
         }
-
-        println!("Unknown line: {}", line);
     }
 
     instructions
