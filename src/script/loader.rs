@@ -23,7 +23,19 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
         }
 
         if let Some(rest) = line.strip_prefix("say ") {
-            instructions.push(Instruction::Say(rest.trim().to_string()));
+
+        if let Some((speaker, text)) = rest.split_once(':') {
+                instructions.push(Instruction::Say {
+                    speaker: Some(speaker.trim().to_string()),
+                    text: text.trim().to_string(),
+                });
+                } else {
+                    instructions.push(Instruction::Say {
+                        speaker: None,
+                        text: rest.trim().to_string(),
+                    });
+                }
+
             continue;
         }
 

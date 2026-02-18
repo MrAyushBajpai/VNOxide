@@ -28,7 +28,10 @@ use crate::audio::{
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    Say(String),
+    Say {
+        speaker: Option<String>,
+        text: String,
+    },
     Label(String),
     JumpLabel(String),
 
@@ -121,7 +124,8 @@ pub fn script_runner_system(
     let instruction = runner.instructions[runner.ip].clone();
 
     match instruction {
-        Instruction::Say(text) => {
+        Instruction::Say { speaker, text } => {
+            dialogue.speaker = speaker;
             dialogue.current_line = Some(text);
             runner.waiting = true;
         }
