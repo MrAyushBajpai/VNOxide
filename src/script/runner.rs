@@ -2,16 +2,50 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 use crate::ui::dialogue::DialogueState;
-use crate::ui::choices::{ChoiceRequest};
+use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Say(String),
-    SetVar(String, i64),
     Label(String),
     JumpLabel(String),
-    Choice(Vec<(String, String)>), // (button text, target label)
+
+    // set x = 5, set x += 2 etc
+    SetVar {
+        name: String,
+        op: SetOp,
+        value: f64,
+    },
+
+    // if x >= 5 jump label
+    IfJump {
+        var: String,
+        cmp: CmpOp,
+        value: f64,
+        target: String,
+    },
+
+    Choice(Vec<(String, String)>),
+}
+
+#[derive(Debug, Clone)]
+pub enum SetOp {
+    Assign,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Debug, Clone)]
+pub enum CmpOp {
+    Eq,
+    Greater,
+    Less,
+    GreaterEq,
+    LessEq,
 }
 
 #[derive(Resource)]
@@ -37,9 +71,9 @@ impl ScriptRunner {
     pub fn rebuild_labels(&mut self) {
         self.labels.clear();
 
-        for (index, instr) in self.instructions.iter().enumerate() {
+        for (i, instr) in self.instructions.iter().enumerate() {
             if let Instruction::Label(name) = instr {
-                self.labels.insert(name.clone(), index);
+                self.labels.insert(name.clone(), i);
             }
         }
     }
@@ -52,6 +86,18 @@ impl ScriptRunner {
             println!("Label not found: {}", label);
         }
     }
+}
+
+fn get_number(vars: &VarStore, name: &str) -> f64 {
+    match vars.get(name) {
+        Some(Value::Int(v)) => *v as f64,
+        Some(Value::Float(v)) => *v as f64,
+        _ => 0.0,
+    }
+}
+
+fn set_number(vars: &mut VarStore, name: &str, value: f64) {
+    vars.set(name, Value::Float(value as f32));
 }
 
 pub fn script_runner_system(
@@ -76,10 +122,6 @@ pub fn script_runner_system(
             runner.waiting = true;
         }
 
-        Instruction::SetVar(name, value) => {
-            vars.set(&name, Value::Int(value));
-        }
-
         Instruction::Label(_) => {}
 
         Instruction::JumpLabel(label) => {
@@ -90,6 +132,38 @@ pub fn script_runner_system(
         Instruction::Choice(options) => {
             choice_req.options = Some(options);
             runner.waiting = true;
+        }
+
+        Instruction::SetVar { name, op, value } => {
+            let current = get_number(&vars, &name);
+
+            let result = match op {
+                SetOp::Assign => value,
+                SetOp::Add => current + value,
+                SetOp::Sub => current - value,
+                SetOp::Mul => current * value,
+                SetOp::Div => current / value,
+                SetOp::Mod => current % value,
+            };
+
+            set_number(&mut vars, &name, result);
+        }
+
+        Instruction::IfJump { var, cmp, value, target } => {
+            let current = get_number(&vars, &var);
+
+            let condition = match cmp {
+                CmpOp::Eq => current == value,
+                CmpOp::Greater => current > value,
+                CmpOp::Less => current < value,
+                CmpOp::GreaterEq => current >= value,
+                CmpOp::LessEq => current <= value,
+            };
+
+            if condition {
+                runner.jump_to_label(&target);
+                return;
+            }
         }
     }
 
