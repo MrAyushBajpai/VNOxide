@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::ui::dialogue::DialogueState;
 use crate::ui::choices::ChoiceRequest;
 use crate::vars::store::{VarStore, Value};
-use crate::script::expr::evaluate_expression;
+use crate::script::expr::eval;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -18,22 +18,11 @@ pub enum Instruction {
     },
 
     IfJump {
-        var: String,
-        cmp: CmpOp,
-        value: f64,
+        condition: String,
         target: String,
     },
 
     Choice(Vec<(String, String)>),
-}
-
-#[derive(Debug, Clone)]
-pub enum CmpOp {
-    Eq,
-    Greater,
-    Less,
-    GreaterEq,
-    LessEq,
 }
 
 #[derive(Resource)]
@@ -77,14 +66,6 @@ fn set_number(vars: &mut VarStore, name: &str, value: f64) {
     vars.set(name, Value::Float(value as f32));
 }
 
-fn get_number(vars: &VarStore, name: &str) -> f64 {
-    match vars.get(name) {
-        Some(Value::Int(v)) => *v as f64,
-        Some(Value::Float(v)) => *v as f64,
-        _ => 0.0,
-    }
-}
-
 pub fn script_runner_system(
     mut runner: ResMut<ScriptRunner>,
     mut dialogue: ResMut<DialogueState>,
@@ -116,22 +97,13 @@ pub fn script_runner_system(
         }
 
         Instruction::SetVar { name, expression } => {
-            let value = evaluate_expression(&expression, &vars);
+            let value = eval(&expression, &vars);
             set_number(&mut vars, &name, value);
         }
 
-        Instruction::IfJump { var, cmp, value, target } => {
-            let current = get_number(&vars, &var);
-
-            let cond = match cmp {
-                CmpOp::Eq => current == value,
-                CmpOp::Greater => current > value,
-                CmpOp::Less => current < value,
-                CmpOp::GreaterEq => current >= value,
-                CmpOp::LessEq => current <= value,
-            };
-
-            if cond {
+        Instruction::IfJump { condition, target } => {
+            let result = eval(&condition, &vars);
+            if result != 0.0 {
                 runner.jump_to_label(&target);
                 return;
             }

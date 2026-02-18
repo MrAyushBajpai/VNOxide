@@ -1,5 +1,5 @@
 use std::fs;
-use crate::script::runner::{Instruction, CmpOp};
+use crate::script::runner::Instruction;
 
 pub fn load_script(path: &str) -> Vec<Instruction> {
     let content = fs::read_to_string(format!("assets/{}", path))
@@ -40,26 +40,10 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
         }
 
         if let Some(rest) = line.strip_prefix("if ") {
-            let parts: Vec<&str> = rest.split_whitespace().collect();
-            if parts.len() == 5 && parts[3] == "jump" {
-                let var = parts[0].to_string();
-                let value: f64 = parts[2].parse().unwrap_or(0.0);
-                let target = parts[4].to_string();
-
-                let cmp = match parts[1] {
-                    "==" => CmpOp::Eq,
-                    ">" => CmpOp::Greater,
-                    "<" => CmpOp::Less,
-                    ">=" => CmpOp::GreaterEq,
-                    "<=" => CmpOp::LessEq,
-                    _ => continue,
-                };
-
+            if let Some((cond, target)) = rest.split_once(" jump ") {
                 instructions.push(Instruction::IfJump {
-                    var,
-                    cmp,
-                    value,
-                    target,
+                    condition: cond.trim().to_string(),
+                    target: target.trim().to_string(),
                 });
             }
             continue;
@@ -80,6 +64,8 @@ pub fn load_script(path: &str) -> Vec<Instruction> {
             instructions.push(Instruction::Choice(options));
             continue;
         }
+
+        println!("Unknown line: {}", line);
     }
 
     instructions
